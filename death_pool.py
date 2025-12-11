@@ -76,7 +76,7 @@ def plot_cumulative_years(ax, year_range, df):
         )
 
 # Define the year ranges (cumulative, from 2017 to 2024)
-year_ranges = [list(range(2017, year + 1)) for year in range(2017, 2025)]
+year_ranges = [list(range(2017, year + 1)) for year in range(2017, 2026)]
 
 # Number of subplots needed
 num_plots = len(year_ranges)
