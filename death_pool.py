@@ -75,8 +75,10 @@ def plot_cumulative_years(ax, year_range, df):
             fontsize=8, ha="right", va="bottom", alpha=0.7
         )
 
-# Define the year ranges (cumulative, from 2017 to 2024)
-year_ranges = [list(range(2017, year + 1)) for year in range(2017, 2026)]
+# Dynamically determine the valid year range from the dataset
+valid_years = df["Year"].unique()  # Get the unique years in the dataset
+# Create a list of year ranges up to each valid year, ensuring no years are skipped
+year_ranges = [list(range(min(valid_years), year + 1)) for year in valid_years if year >= min(valid_years)]
 
 # Number of subplots needed
 num_plots = len(year_ranges)
