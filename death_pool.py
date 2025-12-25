@@ -4,43 +4,36 @@ import numpy as np
 import os
 from matplotlib.ticker import MaxNLocator
 
-# Define the path to the data folder and the file
-data_folder = "data"
-data_file = "death_pool_stats.csv"
 
-# Construct the full file path
-data_path = os.path.join(data_folder, data_file)
+# Define the input folder and file
+input_folder = "data"
+input_file = "death_pool_stats.csv"
+input_path = os.path.join(input_folder, input_file)
+normalized_input_path = os.path.normpath(input_path)
 
-# Load the dataset
-df = pd.read_csv(data_path)
+# Define the output folder and file
+output_folder = "images"
+output_file = "death_pool_standings.png"
+os.makedirs(output_folder, exist_ok=True)
+output_image = os.path.join(output_folder, output_file)
+normalized_output_image = os.path.normpath(output_image)
 
-# Data validation: Check for missing columns
-required_columns = ["Deaths", "Points", "Wins", "Rank", "Player", "Year"]
-missing_columns = [col for col in required_columns if col not in df.columns]
+# Define number of columns for subplots
+cols = 4
 
-if missing_columns:
-    raise ValueError(f"Missing required columns: {', '.join(missing_columns)}")
 
-# Normalize 'Average Rank' for coloring once, outside the loop
-df["Rank_Color"] = df["Rank"].apply(
-    lambda x: (x - df["Rank"].min()) / (df["Rank"].max() - df["Rank"].min())
-)
-
-# Function to generate the plot for each cumulative year range
 def plot_cumulative_years(ax, year_range, df):
     """
-    Generate a scatter plot for a specific year range showing player stats:
-    - Deaths
-    - Points
-    - Wins
-    - Average Rank
-    
-    The plot uses a color map to represent average rank and adjusts point sizes based on wins.
+    Generate a scatter plot for a cumulative year range.
+    - Total Deaths (x-axis)
+    - Total Points (y-axis)
+    - Total Wins (size of point)
+    - Average Rank (color of point: blue = best, red = worst)
     """
-    # Filter data for the given year range
+    # Filter the DataFrame for the specified year range
     df_filtered = df[df["Year"].isin(year_range)]
 
-    # Aggregate the data for each player
+    # Aggregate data by player
     df_player = df_filtered.groupby("Player").agg(
         Total_Deaths=("Deaths", "sum"),
         Total_Points=("Points", "sum"),
@@ -49,77 +42,80 @@ def plot_cumulative_years(ax, year_range, df):
         Count_Years=("Year", "nunique")
     ).reset_index()
 
-    # Plot the data in the provided axis (ax)
+    # Create scatter plot
     scatter = ax.scatter(
         df_player["Total_Deaths"],
         df_player["Total_Points"],
-        c=df_player["Average_Rank"],  # Use normalized rank for color
-        s=(np.clip(2 ** df_player["Total_Wins"], None, 500)) * 100,  # Exponential scaling for size, capped at 500
-        cmap="coolwarm",  # Use 'coolwarm' colormap for coloring based on rank
-        alpha=0.7  # Make the dots semi-transparent
+        c=df_player["Average_Rank"],  # Normalized rank for color mapping
+        s=(np.clip(2 ** df_player["Total_Wins"], None, 500)) * 100,  # Exponential size scaling with cap at 500
+        cmap="coolwarm",  # Red to blue color map
+        alpha=0.7  # Transparency for better visibility
     )
 
-    # Set labels and title (use the last year in the range for the title)
+    # Set titles and labels using the last year in the range
     ax.set_title(f"Death Pool Standings ({year_range[-1]})")
     ax.set_xlabel("Deaths")
     ax.set_ylabel("Points")
 
-    # Add a colorbar to the plot for rank indication
+    # Add color bar for average rank
     cbar = plt.colorbar(scatter, ax=ax)
     cbar.set_label("Avg. Rank")
 
-    # Label each point with the player name, without background shading
+    # Annotate each point with the player's name
     for _, row in df_player.iterrows():
         ax.text(
             row["Total_Deaths"], row["Total_Points"], row["Player"],
             fontsize=8, ha="right", va="bottom", alpha=0.7
         )
 
-# Dynamically determine the valid year range from the dataset
-valid_years = df["Year"].unique()  # Get the unique years in the dataset
-# Create a list of year ranges up to each valid year, ensuring no years are skipped
-year_ranges = [list(range(min(valid_years), year + 1)) for year in valid_years if year >= min(valid_years)]
+def main():
+    # Read the CSV data
+    df = pd.read_csv(input_path)
 
-# Number of subplots needed
-num_plots = len(year_ranges)
-cols = 4  # Number of columns of subplots
-rows = (num_plots + cols - 1) // cols  # Calculate the number of rows based on the number of year ranges
+    # Validate required columns
+    required_columns = ["Deaths", "Points", "Wins", "Rank", "Player", "Year"]
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {', '.join(missing_columns)}")
 
-# Create a figure with subplots
-fig, axes = plt.subplots(nrows=rows, ncols=cols, figsize=(4 * cols, 3 * rows))
+    # Normalize Rank for color mapping
+    df["Rank_Color"] = df["Rank"].apply(
+        lambda x: (x - df["Rank"].min()) / (df["Rank"].max() - df["Rank"].min())
+    )
 
-# Flatten axes array for easier iteration
-axes = axes.flatten()
+    # Generate year ranges for subplots
+    valid_years = sorted(df["Year"].unique())
+    year_ranges = [list(range(min(valid_years), y + 1)) for y in valid_years]
 
-# Label each subplot with the corresponding year range
-for i, year_range in enumerate(year_ranges):
-    # Plot for the current year range
-    plot_cumulative_years(axes[i], year_range, df)
-        
-    # Add a grid for better visualization
-    axes[i].grid(True, linestyle="--", alpha=0.5)
+    # Calculate number of rows needed for subplots
+    rows = (len(year_ranges) + cols - 1) // cols
 
-    # Force integer ticks for both x and y axes
-    axes[i].xaxis.set_major_locator(MaxNLocator(integer=True))
-    axes[i].yaxis.set_major_locator(MaxNLocator(integer=True))
+    # Create subplots
+    fig, axes = plt.subplots(rows, cols, figsize=(4 * cols, 3 * rows))
+    # Flatten axes array for easy indexing
+    axes = axes.flatten()
 
-# Hide unused axes if there are any extra subplots
-for ax in axes[len(year_ranges):]:
-    ax.axis("off")
+    # Generate plots for each year range
+    for i, year_range in enumerate(year_ranges):
+        plot_cumulative_years(axes[i], year_range, df)
 
-# Adjust layout to avoid overlapping subplots
-plt.tight_layout()
+        # Customize grid and ticks
+        axes[i].grid(True, linestyle="--", alpha=0.5)
+        axes[i].xaxis.set_major_locator(MaxNLocator(integer=True))
+        axes[i].yaxis.set_major_locator(MaxNLocator(integer=True))
 
-# Ensure the 'images' folder exists for saving the plot
-output_folder = "images"
-os.makedirs(output_folder, exist_ok=True)
+    # Turn off unused subplots
+    for ax in axes[len(year_ranges):]:
+        ax.axis("off")
 
-# Save the plot as a high-resolution image in the 'images' folder
-output_image = os.path.join(output_folder, "death_pool_standings.png")
-plt.savefig(output_image, dpi=300)
+    # Adjust layout for better spacing
+    plt.tight_layout()
 
-# Display the plot
-plt.show()
+    # Save and show the final figure
+    plt.savefig(normalized_output_image, dpi=300)
+    plt.show()
+    print(f"Visualization saved as {normalized_output_image}")
 
-# Print a completion message with the output path
-print(f"Visualization saved as {output_image}")
+
+if __name__ == "__main__":
+    main()
