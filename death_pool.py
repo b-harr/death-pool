@@ -53,9 +53,9 @@ def plot_cumulative_years(ax, year_range, df):
     )
 
     # Set titles and labels using the last year in the range
-    ax.set_title(f"Death Pool Standings ({year_range[-1]})")
     ax.set_xlabel("Deaths")
     ax.set_ylabel("Points")
+    ax.set_title(f"Death Pool Standings ({year_range[-1]})")
 
     # Add color bar for average rank
     cbar = plt.colorbar(scatter, ax=ax)
