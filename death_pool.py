@@ -9,14 +9,14 @@ from matplotlib.ticker import MaxNLocator
 input_folder = "data"
 input_file = "death_pool_stats.csv"
 input_path = os.path.join(input_folder, input_file)
-normalized_input_path = os.path.normpath(input_path)
+input_csv = os.path.normpath(input_path)
 
 # Define the output folder and file
 output_folder = "images"
 output_file = "death_pool_standings.png"
 os.makedirs(output_folder, exist_ok=True)
-output_image = os.path.join(output_folder, output_file)
-normalized_output_image = os.path.normpath(output_image)
+output_path = os.path.join(output_folder, output_file)
+output_png = os.path.normpath(output_path)
 
 # Define number of columns for subplots
 cols = 4
@@ -70,7 +70,7 @@ def plot_cumulative_years(ax, year_range, df):
 
 def main():
     # Read the CSV data
-    df = pd.read_csv(input_path)
+    df = pd.read_csv(input_csv)
 
     # Validate required columns
     required_columns = ["Deaths", "Points", "Wins", "Rank", "Player", "Year"]
@@ -112,9 +112,9 @@ def main():
     plt.tight_layout()
 
     # Save and show the final figure
-    plt.savefig(normalized_output_image, dpi=300)
+    plt.savefig(output_png, dpi=300)
     plt.show()
-    print(f"Visualization saved as {normalized_output_image}")
+    print(f"Visualization saved as {output_png}")
 
 
 if __name__ == "__main__":
